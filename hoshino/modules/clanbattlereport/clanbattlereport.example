@@ -1,0 +1,32 @@
+'''
+公会战报告书配置
+'''
+class report_config(object):
+
+# 本期星座
+    constellation_cn = '天秤'
+    constellation_tw = '双子'
+    constellation_jp = '天蝎'
+
+# 生成报告的间隔时间（秒）
+    time_limit = 60*60
+
+# 离职报告背景图片
+    Resignation = '环游物语离职报告.png'
+
+# 会战报告背景图片
+    FindingsLetter = '环游物语会战报告.png'
+    
+#=============以下配置插件版不填===============
+
+#=============便携版或源码版必填===============
+
+# yobot主页地址
+    yobot_url = ''
+# 获取主页地址：在群内向bot发送指令“手册”，复制bot发送的链接地址，删除末尾的manual/后即为主页地址
+# 例:https://域名/目录/或http://IP地址:端口号/目录/,注意不要漏掉最后的斜杠！
+
+# 数据库绝对路径
+    db_path = ''
+# 例：C:/Hoshino/hoshino/modules/yobot/yobot/src/client/yobot_data/yobotdata.db
+# 注意斜杠方向！！！
