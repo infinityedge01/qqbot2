@@ -15,7 +15,7 @@ class PCRClient:
             "Accept-Encoding": "gzip",
             "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 6.0.1; VTR-AL00 Build/V417IR)",
             "X-Unity-Version": "2017.4.37c2",
-            "APP-VER": "2.4.8",
+            "APP-VER": "2.4.10",
             "BATTLE-LOGIC-VERSION": "3",
             "BUNDLE_VER" : "",
             "CHANNEL-ID": "1",

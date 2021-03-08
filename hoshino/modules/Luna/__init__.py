@@ -33,40 +33,43 @@ async def query_by_rank(session):
     msg_str = Clan.rank_to_string(Clan.get_rank_status(rank), long_info = True)
     await session.send(message.MessageSegment.text(msg_str))
 
-def get_score_line():
+def get_score_line(lst):
     global Clan
     msg_str = ''
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(1), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(2), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(3), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(20), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(50), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(150), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(300), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(700), long_info = False)
-    msg_str += '\n'
-    msg_str += Clan.rank_to_string(Clan.get_rank_status(1300), long_info = False)
+    for x in lst:  
+        msg_str += Clan.rank_to_string(Clan.get_rank_status(x), long_info = False)
+        msg_str += '\n'
     return msg_str
 
 @on_command('查档线', only_to_me = False)
 async def query_score_line(session):
     if session.current_arg == '':
-        msg_str = get_score_line()
+        msg_str = get_score_line([1, 2, 3, 20])
+        await session.send(message.MessageSegment.text(msg_str))
+        msg_str = get_score_line([50, 100, 150])
         await session.send(message.MessageSegment.text(msg_str))
 
+@on_command('查页', only_to_me = False)
+async def query_page_score(session):
+    match = re.match(r'^(\d+)', session.current_arg)
+    if not match:
+        return
+    global Clan
+    page = int(match.group(1))
+    msg_str = ''
+    data = Clan.get_page_data(page + 1)
+    for i in range(len(data)):
+        msg_str += Clan.rank_to_string(data[i], long_info = False)
+        msg_str += '\n'
+        if i == 4:
+            await session.send(message.MessageSegment.text(msg_str))
+            msg_str = ''
 
 async def push_score_line_scheduled():
-    msg_str = get_score_line()
+    msg_str = get_score_line([1, 2, 3, 20, 50, 100, 150])
     bot = get_bot()
     try:
-        await bot.send_group_msg(group_id=1038672908, message=message.MessageSegment.text("截至当前的档线：\n") + message.MessageSegment.text(msg_str))
+        await bot.send_group_msg(group_id=653134962, message=message.MessageSegment.text("截至当前的档线：\n") + message.MessageSegment.text(msg_str))
     except CQHttpError:
         pass
 

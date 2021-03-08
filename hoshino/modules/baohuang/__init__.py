@@ -16,7 +16,10 @@ db = Database(os.path.join(sys.path[0], "hoshino/modules/baohuang"))
 on_table = []
 table = None
 buqiang = []
-basepoint = 500
+basepoint = 1000
+
+
+
 @on_command('开启保皇', only_to_me = False, permission = perm.SUPERUSER)
 async def open_baohuang(session):
     if session.current_arg == '' and session.event.detail_type == 'group':
@@ -49,6 +52,9 @@ async def auto_add_friend(session: RequestSession):
 async def get_free_points(session):
     if session.current_arg == '' and session.event.group_id in is_baohuang_open:
         global db
+        if db.get_point(session.event['user_id']) >= 10000:
+            await session.send(message.MessageSegment.at(session.event['user_id']) + message.MessageSegment.text('积分低于10000才可以获取积分'))
+            return
         is_success = db.get_free_points(session.event['user_id'], 10000)
         if is_success:
             await session.send(message.MessageSegment.at(session.event['user_id']) + message.MessageSegment.text('已为你成功添加积分。当前积分：%d' % (db.get_point(session.event['user_id']))))
@@ -156,6 +162,35 @@ def tile_list_to_string(tiles: list) -> str:
     return ret
 
 
+schedule_id = None
+async def anbao_scheduled():
+    if table.game_period != 3: return
+    table.anbao()
+    table.game_begin()
+    msg1 = message.MessageSegment.text('保子选择了暗保，游戏开始！')
+    for i in range(5): 
+        msg1 = msg1 + message.MessageSegment.text('\n%d号位：[%s]' % (i + 1, get_string_identity(table.players[table.player_id[i]].get_open_identity()))) + message.MessageSegment.at(table.player_id[i])
+        if i == 1:
+            await bot.send_group_msg(group_id = table.group_id, message = msg1, self_id=571949166)
+            msg1 = message.MessageSegment.text('')
+    msg1 = msg1 + message.MessageSegment.text('\n[%s]' % (get_string_identity(table.players[table.huangdi_id].get_open_identity()))) + message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('请出牌')
+    await bot.send_group_msg(group_id = table.group_id, message = msg1, self_id=571949166)
+
+
+async def dengji_scheduled():
+    if table.game_period != 2: return
+    table.dengji()
+    table.mingbao_begin()
+    await bot.send_group_msg(group_id= table.group_id, message= message.MessageSegment.text('[皇帝]') + message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('登基\n现在是明暗保阶段') + message.MessageSegment.text('，保子如需明保请在私聊中发送「明保」，否则在私聊种发送「暗保」，操作时间60s'), self_id = 571949166)
+    scheduler.add_job(func=anbao_scheduled, trigger= DateTrigger(run_date=datetime.datetime.now() + datetime.timedelta(seconds=60)), misfire_grace_time=1, id='anbao')
+
+
+async def buqiang_scheduled():
+    if table.game_period != 1: return
+    table.dengji_begin()
+    await bot.send_group_msg(group_id= table.group_id, message= message.MessageSegment.text('现在是登基阶段，当前皇帝是：') + message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('\n如需登基请在群聊中发送「登基」，否则发送「让位」，操作时间60s'), self_id = 571949166)
+    scheduler.add_job(func=dengji_scheduled, trigger= DateTrigger(run_date=datetime.datetime.now() + datetime.timedelta(seconds=60)), misfire_grace_time=1, id='dengji')
+
 @on_command('开始游戏', aliases=('开局'), only_to_me = False, permission = perm.GROUP)
 async def start_game(session):
     global on_table, table, buqiang
@@ -181,11 +216,14 @@ async def start_game(session):
         await session.send(msg1)
         table.qiangdu_begin()
         buqiang = []
-        await session.send(message.MessageSegment.text('现在是抢独阶段，如需独保请在群聊中发送「抢独」，否则发送「不抢」'))
+        await session.send(message.MessageSegment.text('现在是抢独阶段，如需独保请在群聊中发送「抢独」，否则发送「不抢」，抢独时间 60s'))
         for i in range(5):
             str1 = tile_dict_to_string(table.players[table.player_id[i]].get_tiles())
             log.logger.debug(str1)
             await bot.send_private_msg(user_id = table.player_id[i], message = message.MessageSegment.text(str1), self_id = session.event.self_id)
+        scheduler.add_job(func=buqiang_scheduled, trigger= DateTrigger(run_date=datetime.datetime.now() + datetime.timedelta(seconds=60)), misfire_grace_time=1, id='qiangdu')
+        log.logger.debug(scheduler._pending_jobs)
+        
 
 @on_command('抢独', only_to_me = False, permission = perm.GROUP)
 async def qiangdu(session):
@@ -197,6 +235,10 @@ async def qiangdu(session):
         if qqid in buqiang: 
             await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('你已经不抢了，不能抢独'))
             return
+        try:
+            scheduler.remove_job('qiangdu')
+        except:
+            pass
         table.qiangdu(qqid)
         table.game_begin()
         msg1 = message.MessageSegment.at(qqid) + message.MessageSegment.text('抢独，游戏开始！')
@@ -222,8 +264,7 @@ async def not_qiangdu(session):
         buqiang.append(qqid)
         await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('不抢'))
         if len(buqiang) == 5:
-            table.dengji_begin()
-            await session.send(message.MessageSegment.text('现在是登基阶段，当前皇帝是：') + message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('\n如需登基请在群聊中发送「登基」，否则发送「让位」'))
+            await buqiang_scheduled()
 
 @on_command('登基', only_to_me = False, permission = perm.GROUP)
 async def dengji(session):
@@ -235,9 +276,11 @@ async def dengji(session):
         if qqid != table.huangdi_id: 
             await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('你又不是皇帝，登你') + message.MessageSegment.emoji(128052) +message.MessageSegment.text('呢？'))
             return
-        table.dengji()
-        table.mingbao_begin()
-        await session.send(message.MessageSegment.text('[皇帝]') + message.MessageSegment.at(qqid) + message.MessageSegment.text('登基\n现在是明暗保阶段') + message.MessageSegment.text('，保子如需明保请在私聊中发送「明保」，否则在私聊种发送「暗保」'))
+        try:
+            scheduler.remove_job('dengji')
+        except:
+            pass
+        await dengji_scheduled()
 
 @on_command('让位', only_to_me = False, permission = perm.GROUP)
 async def rangwei(session):
@@ -253,6 +296,11 @@ async def rangwei(session):
         if is_success == -2:
             await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('你没有足够的2，不能让位'))
             return
+        try:
+            scheduler.remove_job(job_id= 'dengji')
+        except:
+            pass
+        scheduler.add_job(func=dengji_scheduled, trigger= DateTrigger(run_date=datetime.datetime.now() + datetime.timedelta(seconds=60)), misfire_grace_time=1, id='dengji')
         await session.send(message.MessageSegment.text('[皇帝]') + message.MessageSegment.at(qqid) + message.MessageSegment.text('让位给了') +  message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('，新皇帝如需如需登基请在群聊中发送「登基」，否则发送「让位」\n当前让位所需2：%d' % (table.rangwei2)))
         str1 = tile_dict_to_string(table.players[qqid].get_tiles())
         log.logger.debug(str1)
@@ -271,6 +319,10 @@ async def mingbao(session):
         if qqid != table.baozi_id: 
             await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('你又不是保子，明你') + message.MessageSegment.emoji(128052) +message.MessageSegment.text('呢？'))
             return
+        try:
+            scheduler.remove_job('anbao')
+        except:
+            pass
         table.mingbao()
         table.game_begin()
         msg1 = message.MessageSegment.at(qqid) + message.MessageSegment.text('明保，游戏开始！')
@@ -289,13 +341,11 @@ async def anbao(session):
         if qqid != table.baozi_id: 
             await session.send(message.MessageSegment.at(qqid) + message.MessageSegment.text('你又不是保子，暗你') + message.MessageSegment.emoji(128052) +message.MessageSegment.text('呢？'))
             return
-        table.anbao()
-        table.game_begin()
-        msg1 = message.MessageSegment.text('保子选择了暗保，游戏开始！')
-        for i in range(5): 
-            msg1 = msg1 + message.MessageSegment.text('\n%d号位：[%s]' % (i + 1, get_string_identity(table.players[table.player_id[i]].get_open_identity()))) + message.MessageSegment.at(table.player_id[i])
-        msg1 = msg1 + message.MessageSegment.text('\n[%s]' % (get_string_identity(table.players[table.huangdi_id].get_open_identity()))) + message.MessageSegment.at(table.huangdi_id) + message.MessageSegment.text('请出牌')
-        await bot.send_group_msg(group_id = table.group_id, message = msg1, self_id = session.event.self_id)
+        try:
+            scheduler.remove_job('anbao')
+        except:
+            pass
+        await anbao_scheduled()
 
 
 @on_command('我的手牌', only_to_me = False, permission = perm.EVERYBODY)
@@ -334,6 +384,7 @@ async def game_end():
                 if player == table.huangdi_id: table.players[player].point = -basepoint * table.mutiple * 4
                 else: table.players[player].point = basepoint * table.mutiple
     elif table.huangdi_id == table.baozi_id:
+        table.mutiple *= 2
         if table.players[table.huangdi_id].get_order() == 1:
             for player in table.player_id:
                 if player == table.huangdi_id: table.players[player].point = basepoint * table.mutiple * 4
@@ -352,7 +403,10 @@ async def game_end():
     for i in range(5): 
         msg1 = msg1 + message.MessageSegment.text('\n%d号位：[%s]' % (i + 1, get_string_identity(table.players[table.player_id[i]].get_open_identity()))) + message.MessageSegment.at(table.player_id[i]) + message.MessageSegment.text('位次[%s]，得分：%d 点' % (ke_to_str(table.players[table.player_id[i]].get_order()), table.players[table.player_id[i]].point))
         db.add_point(table.player_id[i], table.players[table.player_id[i]].point)
-    await bot.send_group_msg(group_id = table.group_id, message = msg1)
+        if i == 1:
+            await bot.send_group_msg(group_id = table.group_id, message = msg1, self_id= 571949166)
+            msg1 = message.MessageSegment.text('')
+    await bot.send_group_msg(group_id = table.group_id, message = msg1, self_id= 571949166)
     table = None
 
 @on_command('强行结算', only_to_me = False, permission = perm.SUPERUSER)
@@ -397,7 +451,9 @@ async def chupai(session):
                 await game_end()
                 return
         else:
-            if table.players[qqid].get_tile_count() <= 10:
+            if table.players[qqid].get_tile_count() <= 10:        
+                await session.send(msg1)
+                msg1 = message.MessageSegment.text('')
                 msg1 = msg1 + message.MessageSegment.text('%d号位：[%s]' % (table.players[qqid].table_id + 1, get_string_identity(table.players[qqid].get_open_identity()))) + message.MessageSegment.at(qqid) + message.MessageSegment.text('还剩下%d张牌\n' % (table.players[qqid].get_tile_count()))
         msg1 = msg1 + message.MessageSegment.text('%d号位：[%s]' % (table.players[nxtid].table_id + 1, get_string_identity(table.players[nxtid].get_open_identity()))) + message.MessageSegment.at(nxtid) + message.MessageSegment.text('请出牌')
         table.current_discard = nxtid
@@ -416,6 +472,7 @@ async def guopai(session):
         is_success = table.pass_tile()
         if not is_success: 
             await session.send(message.MessageSegment.text('你是第一手出牌，不能过牌'))
+            return
         nxtid = table.get_next_player()
         msg1 = message.MessageSegment.text('最近一次出牌：%d号位：[%s]' % (table.players[table.last_discard].table_id + 1, get_string_identity(table.players[table.last_discard].get_open_identity()))) + message.MessageSegment.at(table.last_discard) + message.MessageSegment.text('出牌：%s\n' % (tile_list_to_string(table.last_tile))) 
         msg1 = msg1 + message.MessageSegment.text('上回合：%d号位：[%s]' % (table.players[qqid].table_id + 1, get_string_identity(table.players[qqid].get_open_identity()))) + message.MessageSegment.at(qqid) + message.MessageSegment.text('过牌：\n' )
@@ -451,3 +508,7 @@ async def zhuangtai(session):
             for qqid in on_table:
                 msg1 = msg1 + message.MessageSegment.text('\n') +  message.MessageSegment.at(qqid)
         await session.send(msg1)
+
+@on_command('保皇帮助', only_to_me = False, permission = perm.GROUP)
+async def baohuang_help(session):
+    await session.send(message.MessageSegment.image(os.path.join(sys.path[0], "hoshino/modules/baohuang/help.gif")))

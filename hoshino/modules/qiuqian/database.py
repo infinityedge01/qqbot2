@@ -32,7 +32,7 @@ class Database:
         else:
             points, last_day = 0, ""
         flag = False
-        if today != last_day:
+        if today != last_day or points == 0:
             last_day = today
             flag = True
         else:

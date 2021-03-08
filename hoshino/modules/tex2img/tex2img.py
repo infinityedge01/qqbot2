@@ -43,5 +43,5 @@ async def tex2img(session):
 	img=Image.open(png_file)
 	img=transparence2white(img)
 	img.save(png_file)
-	await session.send(message.MessageSegment.image(png_file))
+	await session.send(message.MessageSegment.image("file://" + png_file))
 

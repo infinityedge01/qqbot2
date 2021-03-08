@@ -6,8 +6,8 @@ import random
 from .PCRClient import PCRClient
 from nonebot import log
 BOSS_LIFE_LIST = [6000000, 8000000, 10000000, 12000000, 20000000]
-BOSS_SCORE_MUTIPILE = [[1.0, 1.0, 1.3, 1.3, 1.5], [1.3, 1.3, 1.8, 1.8, 2.0]]
-LAP_UPGRADE = [2]
+BOSS_SCORE_MUTIPILE = [[1.0, 1.0, 1.3, 1.3, 1.5], [1.4, 1.4, 1.8, 1.8, 2.0], [2.0, 2.0, 2.5, 2.5, 3.0]]
+LAP_UPGRADE = [4, 11]
 def boss_status(score):
     lap = 1
     boss_id = 0
@@ -22,7 +22,7 @@ def boss_status(score):
         if boss_id > 4:
             boss_id = 0
             lap += 1
-            if ptr == 0:
+            if ptr <= 1:
                 if lap >= LAP_UPGRADE[ptr]: ptr += 1
 
 def process_data(temp):

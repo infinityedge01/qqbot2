@@ -106,7 +106,11 @@ class Table:
         deck.append('皇')
 
         random.shuffle(deck)
-
+        random.shuffle(deck)
+        random.shuffle(deck)
+        random.shuffle(deck)
+        random.shuffle(deck)
+        
         for i in range(len(deck)):
             self.players[self.player_id[i % 5]].add_tile(deck[i])
             if deck[i] == '皇': self.huangdi_id = self.player_id[i % 5]

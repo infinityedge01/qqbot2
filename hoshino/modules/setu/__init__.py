@@ -10,13 +10,19 @@ from nonebot import on_command, CommandSession, scheduler
 from nonebot import message
 from nonebot import get_bot
 from nonebot import log
+from hoshino import Service
+sv = Service("涩图")
+
 from .get_setu import *
-is_setu_open = False
+is_setu_open = True
 setu_send_groupid = 1042285895
 setu_scheduled_open = None
 setu_scheduled_close = None
 setu_scheduled_open_time = None
 setu_scheduled_close_time = None
+
+from .database import *
+db = Database(sys.path[0])
 
 @on_command('开启色图', aliases=('开启涩图'), only_to_me = False, permission = perm.SUPERUSER)
 async def open_setu(session):
@@ -128,6 +134,16 @@ async def get_setu_schedule(session):
             msg = msg + message.MessageSegment.text('{}:{}'.format(str(setu_scheduled_close_time[0]).zfill(2), str(setu_scheduled_close_time[1]).zfill(2)))
         await session.send(msg)
 
+setu_count = 0
+def update_setu_count():
+    global setu_count
+    time = datetime.datetime.now().hour * 6 + datetime.datetime.now().minute // 10
+    db.update_total_setu(time, setu_count)
+    setu_count = 0
+@sv.scheduled_job('cron', minute = '*/10')
+async def _call():
+    update_setu_count()
+
 @on_command('色图', aliases=('涩图'), only_to_me = False)
 async def setu(session: CommandSession):
     bot = get_bot()
@@ -139,7 +155,11 @@ async def setu(session: CommandSession):
             if not Flag:
                 await session.send(message.MessageSegment.text('你看太多涩图了'))
                 return
+            db.update_setu(session.event.user_id)
+            global setu_count
+            setu_count += 1
             msg1 = await get_a_setu()
+            log.logger.debug(str(msg1))
             msg_data = await session.send(msg1)
             log.logger.debug(str(msg_data['message_id']))
             # 制作一个“10秒钟后”触发器

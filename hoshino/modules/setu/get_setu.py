@@ -19,4 +19,4 @@ async def get_a_setu() -> message.MessageSegment:
     setu_file = random.choice(setu_list)
     cur_setu_path = path.join(setu_path, setu_file)
     log.logger.debug(cur_setu_path)
-    return message.MessageSegment.image(cur_setu_path)
+    return message.MessageSegment.image("file://" + cur_setu_path)
