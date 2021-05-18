@@ -30,7 +30,7 @@ def update_msg_count():
 async def _call():
     await asyncio.sleep(20)
     update_msg_count()
-
+update_msg_count()
 @cqbot.on_message
 async def count_msg(context):
     global msg_count

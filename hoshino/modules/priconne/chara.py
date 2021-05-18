@@ -1,8 +1,9 @@
 import importlib
 from io import BytesIO
-
+from os import path
 import pygtrie
 import requests
+import unicodedata
 from fuzzywuzzy import fuzz, process
 from PIL import Image
 
@@ -31,6 +32,13 @@ try:
 except Exception as e:
     logger.exception(e)
 
+def normalize_str_not_convert(string) -> str:
+    """
+    规范化unicode字符串 并 转为小写
+    """
+    string = unicodedata.normalize('NFKC', string)
+    string = string.lower()
+    return string
 
 class Roster:
 
@@ -43,7 +51,7 @@ class Roster:
         self._roster.clear()
         for idx, names in _pcr_data.CHARA_NAME.items():
             for n in names:
-                n = util.normalize_str(n)
+                n = normalize_str_not_convert(n)
                 if n not in self._roster:
                     self._roster[n] = idx
                 else:
@@ -112,6 +120,7 @@ def gen_team_pic(team, size=64, star_slot_verbose=True):
 def download_chara_icon(id_, star):
     url = f'https://redive.estertion.win/icon/unit/{id_}{star}1.webp'
     save_path = R.img(f'priconne/unit/icon_unit_{id_}{star}1.png').path
+    if path.exists(save_path): return
     logger.info(f'Downloading chara icon from {url}')
     try:
         rsp = requests.get(url, stream=True, timeout=5)

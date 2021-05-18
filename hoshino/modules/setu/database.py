@@ -65,12 +65,15 @@ class Database:
         self.db = db_conn.cursor()
         today = time.strftime("%m%d")
         sql_info = list(self.db.execute(
-            "SELECT time, day_setu, total_setu, last_day FROM Total_Data WHERE time=?", ((ttime + 143) % 144 ,)))
-        mem_exists = (len(sql_info) == 1)
+            "SELECT time, day_setu, total_setu, last_day FROM Total_Data ORDER BY total_setu DESC,last_day DESC,time DESC limit 0,5"))
+        #sql_info = list(self.db.execute(
+        #    "SELECT time, day_setu, total_setu, last_day FROM Total_Data WHERE time=?", ((ttime + 143) % 144 ,)))
+        mem_exists = (len(sql_info) != 0)
         if mem_exists:
             day_setu, total_setu, last_day = sql_info[0][1:]
         else:
             day_setu, total_setu, last_day = 0, 0, ""
+        print(day_setu, total_setu, last_day, sql_info)
         if today != last_day:
             day_setu = 0
         day_setu += num

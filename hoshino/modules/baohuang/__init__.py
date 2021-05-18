@@ -511,4 +511,4 @@ async def zhuangtai(session):
 
 @on_command('保皇帮助', only_to_me = False, permission = perm.GROUP)
 async def baohuang_help(session):
-    await session.send(message.MessageSegment.image(os.path.join(sys.path[0], "hoshino/modules/baohuang/help.gif")))
+    await session.send(message.MessageSegment.image("file://" + os.path.join(sys.path[0], "hoshino/modules/baohuang/help.gif")))

@@ -24,6 +24,8 @@ async def query_by_rank(session):
     match = re.match(r'^(\d+)', session.current_arg)
     if not match:
         return
+    await session.send(message.MessageSegment.text('https://kyaru.infedg.xyz/qd'))
+    return
     global Clan
     rank = int(match.group(1))
     if rank <= 0 or rank >= 15000:
@@ -44,6 +46,8 @@ def get_score_line(lst):
 @on_command('查档线', only_to_me = False)
 async def query_score_line(session):
     if session.current_arg == '':
+        await session.send(message.MessageSegment.text('https://kyaru.infedg.xyz/qd'))
+        return
         msg_str = get_score_line([1, 2, 3, 20])
         await session.send(message.MessageSegment.text(msg_str))
         msg_str = get_score_line([50, 100, 150])
@@ -54,6 +58,8 @@ async def query_page_score(session):
     match = re.match(r'^(\d+)', session.current_arg)
     if not match:
         return
+    await session.send(message.MessageSegment.text('https://kyaru.infedg.xyz/qd'))
+    return
     global Clan
     page = int(match.group(1))
     msg_str = ''

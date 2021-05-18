@@ -14,30 +14,35 @@ imgfolderdir = '/root/data/setu_collected/'
 from .database import *
 db = Database(sys.path[0])
 def saveImg(url, imgname):
+    print('Saving image' + url)
     r = requests.get(url)
     nonebot.log.logger.debug(imgfolderdir + imgname + '.' + r.headers['Content-Type'][6:])
     with open(imgfolderdir + imgname + '.' + r.headers['Content-Type'][6:], 'wb') as f:
         f.write(r.content)
 
 def downloadImg(url):
-    r = requests.get(url)
-    return r.content
-    
-def Check_Baidu(imgurl, imgname):
-    imgContent = downloadImg(imgurl)
-    if len(imgContent) < 2e4 or len(imgContent) > 1e7:
-        return
+    r = requests.head(url).headers
+    if 'Size' in r:
+        print('Size: ' + r['Size'])
+        return int(r['Size'])
+    return 0
 
-    censor_APP_ID = '22842022'
-    censor_API_KEY = 'SEBH4QACKkEpGX7NRr7f4tYY'
-    censor_SECRET_KEY = '0oI6FfOHbCuWSFlbgIpnlsBUGkKfOgxt'
+    
+async def Check_Baidu(imgurl, imgname):
+    imgContent = downloadImg(imgurl)
+    if imgContent < 5e4 or imgContent > 1e7:
+        return
     
     #classify_APP_ID = '17981247'
     #classify_API_KEY = '3HuleW8fwIPymQcRM1DNhigp'
     #classify_SECRET_KEY = 'LcClAOmKwGSIXR2st8ishMXUPXkiLaaI'
-    
+    censor_APP_ID = '22842022'
+    censor_API_KEY = 'SEBH4QACKkEpGX7NRr7f4tYY'
+    censor_SECRET_KEY = '0oI6FfOHbCuWSFlbgIpnlsBUGkKfOgxt'
     censor_client = AipContentCensor(censor_APP_ID, censor_API_KEY, censor_SECRET_KEY)
+    
     censor_result = censor_client.imageCensorUserDefined(imgurl)
+    #print(censor_result)
     if 'data' in censor_result:
         s = ''
         for each in censor_result['data']:
@@ -70,6 +75,7 @@ def update_contrib_count():
 async def _call():
     await asyncio.sleep(10)
     update_contrib_count()
+update_contrib_count()
 
 @cqbot.on_message
 async def process_image_message(context):
@@ -79,19 +85,13 @@ async def process_image_message(context):
                 url = x['data']['url']
                 name = url[-41:-9]
                 nonebot.log.logger.debug(name)
-                t = Check_Baidu(url, name)
+                t = await Check_Baidu(url, name)
                 if t == 1:
                     global contrib_count
                     contrib_count += 1
                     db.update_contrib(context['user_id'])
                     await cqbot.send_group_msg(group_id = int(context['group_id']), message = nonebot.message.MessageSegment.text('涩图！'))
                     rnd = random.randint(1,5)
-                    print(rnd)
                     if rnd == 1:
                         await cqbot.send_group_msg(group_id = int(context['group_id']), message = nonebot.message.MessageSegment.text('只要涩图存入库中「涩图！」一响，你的灵魂立刻从炼狱直升天堂'))
                     return
-
-
-
-
-        

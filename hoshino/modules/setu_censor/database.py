@@ -65,8 +65,10 @@ class Database:
         self.db = db_conn.cursor()
         today = time.strftime("%m%d")
         sql_info = list(self.db.execute(
-            "SELECT time, day_contrib, total_contrib, last_day FROM Total_Data WHERE time=?", ((ttime + 143) % 144 ,)))
-        mem_exists = (len(sql_info) == 1)
+            "SELECT time, day_contrib, total_contrib, last_day FROM Total_Data ORDER BY total_contrib DESC,last_day DESC,time DESC limit 0,5"))
+        #sql_info = list(self.db.execute(
+        #    "SELECT time, day_contrib, total_contrib, last_day FROM Total_Data WHERE time=?", ((ttime + 143) % 144 ,)))
+        mem_exists = (len(sql_info) != 0)
         if mem_exists:
             day_contrib, total_contrib, last_day = sql_info[0][1:]
         else:

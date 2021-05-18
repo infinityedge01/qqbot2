@@ -143,7 +143,7 @@ def update_setu_count():
 @sv.scheduled_job('cron', minute = '*/10')
 async def _call():
     update_setu_count()
-
+update_setu_count()
 @on_command('色图', aliases=('涩图'), only_to_me = False)
 async def setu(session: CommandSession):
     bot = get_bot()
